@@ -47,6 +47,16 @@ def chave_uf(elemento):
     chave = elemento['uf']
     return (chave, elemento)
 
+def casos_dengue(elemento):
+    """
+    Recebe uma tupla ('RS', [{},{}])
+    Retorna uma tupla ('RS-2024-12', 8.0)
+    """
+    uf, registros = elemento
+    for registro in registros:
+        yield (f"{uf}-{registro['ano-mes']}", float(registro['casos']))
+    
+
 
 dengue = (
     pipeline
@@ -62,6 +72,10 @@ dengue = (
         beam.Map(chave_uf)
     | "Agrupar pelo estado" >>
         beam.GroupByKey()
+    | "Descompactar casos de dengue" >> 
+        beam.FlatMap(casos_dengue)
+    | "Soma dos casos pela chave" >>
+        beam.CombinePerKey(sum)
     | "Mostrar resultados" >> beam.Map(print)
 )
 
