@@ -1,6 +1,7 @@
 import re
 import apache_beam as beam
 from apache_beam.io import ReadFromText
+from apache_beam.io.textio import WriteToText
 from apache_beam.options.pipeline_options import PipelineOptions
 
 pipeline_options = PipelineOptions(argv=None)
@@ -96,6 +97,24 @@ def filtra_campos_vazios(elemento):
         return True
     return False
 
+def descompactar_elementos(elem):
+    """
+    Receber uma tupla ('CE-2015-01', {'Chuvas': [85.8], 'Dengues': [175.0]})
+    retornar uma tupla ('CE', '2015', '01', '85.8', '175.0')
+    """
+    chave, dados = elem
+    chuva = dados['Chuvas']
+    dengue = dados['Dengues']
+    uf, ano, mes = chave.split('-')
+    return (uf, ano, mes, str(chuva[0]), str(dengue[0]))
+
+def preparar_csv(elem, delimitador=';'):
+    """
+    Receber uma tupla ('CE', '2015', '01', '85.8', '175.0')
+    Retornar uma string delimitada "CE;2015;1;85.8;175.0"
+    """
+    return f'{delimitador}'.join(elem)
+
 dengue = (
     pipeline
     | "Leitura do dataset de dengue" >> 
@@ -141,7 +160,13 @@ resultado = (
     ({'Chuvas': chuvas, 'Dengues': dengue})
     | "Mesclar pcols" >> beam.CoGroupByKey()
     | "Filtrar dados vazios" >> beam.Filter(filtra_campos_vazios)
-    | "Mostrar resultados" >> beam.Map(print)
+    | "Descompactar elementos" >> beam.Map(descompactar_elementos)
+    | "Preparar csv" >> beam.Map(preparar_csv)
+    # | "Mostrar resultados" >> beam.Map(print)
 )
+
+header = 'UF;ANO;MES;CHUVA;DENGUE'
+
+resultado | "Criar arquivo CSV" >> WriteToText('resultado', file_name_suffix='.csv', header=header)
 
 pipeline.run()
