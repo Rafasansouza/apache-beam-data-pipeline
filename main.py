@@ -122,9 +122,11 @@ chuvas = (
 
 
 resultado = (
-    (chuvas, dengue)
-    | "Unir as pcols" >> beam.Flatten()
-    | "Agrupar as pcols" >> beam.GroupByKey()
+    # (chuvas, dengue})
+    # | "Unir as pcols" >> beam.Flatten()
+    # | "Agrupar as pcols" >> beam.GroupByKey()
+    ({'Chuvas': chuvas, 'dengue': dengue})
+    | "Mesclar pcols" >> beam.CoGroupByKey()
     | "Mostrar resultados" >> beam.Map(print)
 )
 
