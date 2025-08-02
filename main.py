@@ -82,6 +82,19 @@ def arredonda(elemento):
     chave, mm = elemento
     return (chave, round(mm, 1))
 
+def filtra_campos_vazios(elemento):
+    """
+    Remove os elementos que tenham chaves vazias
+    Receber uma tupla ('CE-2015-01', {'Chuvas': [0.0], 'dengue': [169.0]})
+    Retorna uma tupla ('CE-2015-01', {'Chuvas': [0.0], 'dengue': [169.0]})
+    """
+    chave, dados = elemento
+    if all([
+        dados['Chuvas'], 
+        dados['Dengues']
+        ]):
+        return True
+    return False
 
 dengue = (
     pipeline
@@ -125,8 +138,9 @@ resultado = (
     # (chuvas, dengue})
     # | "Unir as pcols" >> beam.Flatten()
     # | "Agrupar as pcols" >> beam.GroupByKey()
-    ({'Chuvas': chuvas, 'dengue': dengue})
+    ({'Chuvas': chuvas, 'Dengues': dengue})
     | "Mesclar pcols" >> beam.CoGroupByKey()
+    | "Filtrar dados vazios" >> beam.Filter(filtra_campos_vazios)
     | "Mostrar resultados" >> beam.Map(print)
 )
 
